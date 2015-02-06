@@ -1,0 +1,9 @@
+__productname__ = 'dotinstall'
+__version__ = '0.1'
+__copyright__ = "Copyright (C) 2014 Cinghio Pinghio"
+__author__ = "Cinghio Pinghio"
+__author_email__ = "cinghio@linuxmail.org"
+__description__ = "Install dotfiles"
+__long_description__ = "Install dofile based on some rules"
+__url__ = "cinghiopinghio...."
+__license__ = "Licensed under the GNU GPL v3+."

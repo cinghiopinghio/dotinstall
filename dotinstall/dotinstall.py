@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 # encoding: utf-8
 
-import sys,os,shutil
-import configobj as co
+import sys
+import os
+import shutil
 import time
-from colorama import Fore
 import argparse
+import logging as log
+
+import yaml
 
 NOINSTALL = [\
              'README.md',\
@@ -20,6 +23,143 @@ NOINSTALL = [\
 VERB = True
 INTERACTIVE = True
 FAKEHOME = False
+
+config = dict(pinned=[], noinstall=[],\
+              diffcmd='vimdiff',\
+              rename={},\
+              prehooks={},posthooks={})
+
+class Dotfile(object):
+    """Class for each dotfile
+    New version
+    """
+
+    def __init__(self, repo_file, home_path='~', repo_path='.',rename=None):
+        """Dotfile init
+
+        :real_path: Path to file inside repository
+        :home_path: Home directory (where to install)
+        :repo_path: Source repository of dotfiles (where to look for
+        real_path)
+        :rename: dictionary to raname installed_name s
+
+        """
+        self.original_name = repo_file
+        self.installed_name = repo_file
+        self.renamePath(rename)
+
+        self.sourcedir = os.path.abspath(os.path.expanduser(repo_path)).rstrip('/')
+        self.tagetdir = os.path.expanduser(home_path).rstrip('/')
+        if not os.path.isfile(self.source_file()):
+            print ('No such file', self.source_file())
+            exit(12)
+        
+    def source_file(self, short=False):
+        """Returns the path to source file
+
+        :short: If set, returns a just the file name, not the full path
+        :returns: full path to source file
+
+        """
+        if short:
+            return self.original_name
+        else:
+            return self.sourcedir + '/' + self.original_name
+
+    def target_file(self, short=False):
+        """Returns the path to source file
+
+        :short: If set, returns a just the file name, not the full path
+        :returns: full path to source file
+
+        """
+        if short:
+            return '.' + self.installed_name
+        else:
+            return self.targetdir + '/.' + self.installed_name
+
+    def renamePath(self, rename=None):
+        """rename self.installed_name according to rename
+
+        :rename: dict (default to config ConfigObj)
+        :returns: None
+
+        """
+
+        if rename is None:
+            rename_dict = config['rename']
+            print (rename_dict)
+        else:
+            rename_dict = rename.copy()
+
+        for old, new in rename_dict.items():
+            if old in self.local:
+                self.installed_name = self.installed_name.replace(old, new)
+
+    def __eq__(self, other):
+        return self.original_name == other.original_name
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __str__(self):
+        return self.original_name
+
+class Configuration():
+    """An actual configuration"""
+
+    def __init__(self,path=None):
+
+        self.repository = path
+        self.dotfiles = []
+        if path is not None:
+            self.browse_repo(path)
+
+    def add_file(self, path):
+        """
+
+        :path: TODO
+        :returns: TODO
+
+        """
+        pass
+    def load_cache(self):
+        pass
+    def dump_cache(self):
+        pass
+    def browse_repo(self, path='.'):
+        """Get paths where to put links.
+
+        :path: path to dotfiles repo
+        :returns: list of 2-tuples (local file,path of link)
+
+        """
+
+        self.repository = path.rstrip('/')
+        # get all the pinned folders, plus implicits:
+        # foo/bar -> [foo, foo/bar]
+        pinnedfolds = set([])
+        for f in config['pinned']:
+            fold = f.split('/')
+            for n in range(len(fold)):
+                p = '/'.join(fold[:n+1])
+                pinnedfolds.add(p)
+
+        # brwose for all files/folders in repository to install
+        for l in os.listdir(self.repository):
+            if l not in pinnedfolds and l not in NOINSTALL\
+               and l not in config['noinstall'] and l[0] != '.':
+                dotfile = Dotfile(l)
+                self.dotfiles.append(dotfile)
+        for f in config['pinned']:
+            for l in os.listdir(self.repository+'/'+f):
+                fname = f + '/' + l
+                if fname not in pinnedfolds:
+                    dotfile = Dotfile(fname)
+                    self.dotfiles.append(dotfile)
+
+    def install(self):
+        pass
 
 class DotFile():
     """a class for each dotfile
@@ -76,7 +216,8 @@ class DotFile():
 
         """
         return self._locale
-        
+
+
 def main(args):
     """main
 
@@ -287,15 +428,14 @@ def add_paths(conf,folder='.'):
     return paths
 
 if __name__ == '__main__':
-
     parser = argparse.ArgumentParser(prog='dotinstall',\
                                      description='Install dotfiles')
     parser.add_argument('-c','--color', action='store_true',
                        help='Colored output')
     parser.add_argument('-i','--interactive', action='store_true',
                        help='Ask before installing')
-    parser.add_argument('-v','--verbose', action='store_true',
-                       help='Verbose')
+    parser.add_argument('-v','--verbose', action='count',
+                        help='Verbosity (-v: INFO; -vv: Debug)')
     parser.add_argument('-a','--all', action='store_true',
                        help='same as -civ')
     parser.add_argument('-n','--dry', action='store_true',
@@ -310,6 +450,15 @@ if __name__ == '__main__':
                         help = 'Source file directory')
 
     args = parser.parse_args()
+    if args.verbose == None:
+        log.basicConfig(format="%(levelname)s: %(message)s")
+    elif args.verbose == 1:
+        log.basicConfig(format="%(levelname)s: %(message)s")
+    elif args.verbose == 2:
+        log.basicConfig(format=Fore.GREEN+"%(levelname)s:\
+                        %(message)s"+Fore.RESET, level=log.DEBUG)
+        log.info("Verbose output.")
+
     if args.all:
         VERB = True
         INTERACTIVE = True

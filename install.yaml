@@ -1,0 +1,39 @@
+# Install parameters
+# this file contain config file locations
+# this is a YAML file
+
+#pinned folders (only their content will be soft-linked)
+pinned:
+  - config
+  - mail/notmuch
+  - config/mc
+  - subversion
+  - local/bin
+  - vifm
+  - local/share/mc
+  - config/openbox
+  - local/share
+
+#skip this files
+noinstall:
+  - install.yaml
+  - install.ini
+
+#use this command to perform diffs when a configuration file/folder is
+#already present in the filesystem
+diffcmd: 'meld'
+
+#sometime the user can prefer to set a rename dictionary
+rename:
+  mail/notmuch: mail/.notmuch
+
+#a dict of hooks to be performed before running DOTINSTALL
+prehooks:
+  echo: 'echo "I''m going to mess up with you dotfiles!!!"'
+  pull: 'git pull'
+
+#a dict of hooks to be performed after running DOTINSTALL
+posthooks:
+  msmtp: 'chmod 600 msmtprc'
+
+cachedir: '~/.cache/dotinstall'
